@@ -1,7 +1,9 @@
 import base64
 import io
+import json
 import subprocess
 import time
+import uuid
 
 import cv2
 import httpx
@@ -27,6 +29,18 @@ app = FastAPI(
 
 
 _metrics = {"total": 0, "success": 0, "total_ms": 0.0}
+
+
+def log_event(event: str, level: str = "INFO", **kwargs):
+    """Emite um evento estruturado em JSON para stdout."""
+    import time
+    record = {
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "level": level,
+        "event": event,
+        **kwargs,
+    }
+    print(json.dumps(record, ensure_ascii=False), flush=True)
 
 
 def _decode_image(image_base64: str) -> np.ndarray:
@@ -138,18 +152,53 @@ async def health_check():
 
 @app.post("/predict", response_model=PredictResponse)
 def predict(request: PredictRequest):
+    request_id = str(uuid.uuid4())[:8]
     _metrics["total"] += 1
+    log_event(
+        "predict_started",
+        request_id=request_id,
+        model=request.model_name,
+        confidence=request.confidence,
+    )
     try:
         img = _load_image_from_request(request)
         result = _run_inference(img, request.model_name, request.confidence)
         _metrics["success"] += 1
         _metrics["total_ms"] += result.inference_ms
+        log_event(
+            "predict_completed",
+            request_id=request_id,
+            detections_count=len(result.detections),
+            inference_ms=result.inference_ms,
+            model_used=result.model_used,
+        )
         return result
-    except HTTPException:
+    except HTTPException as e:
+        log_event(
+            "predict_input_error",
+            level="WARNING",
+            request_id=request_id,
+            detail=e.detail,
+            status_code=e.status_code,
+        )
         raise
     except FileNotFoundError as e:
+        log_event(
+            "predict_error",
+            level="ERROR",
+            request_id=request_id,
+            error=str(e),
+            status_code=404,
+        )
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        log_event(
+            "predict_error",
+            level="ERROR",
+            request_id=request_id,
+            error=str(e),
+            status_code=500,
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 

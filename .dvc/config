@@ -1,4 +1,4 @@
 [core]
     remote = local_remote
 ['remote "local_remote"']
-    url = /home/icarofall/dvc-storage
+    url = ssh://icarofall@100.65.246.114/home/icarofall/dvc-storage
