@@ -16,3 +16,7 @@ images/
 
 # Variáveis de ambiente locais
 .env
+
+# Datasets raw e temporários
+dataset/raw/
+dataset/annotated/
