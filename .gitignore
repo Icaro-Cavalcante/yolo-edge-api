@@ -2,8 +2,11 @@
 models/*.pt
 models/*.onnx
 
-# Outputs de inferência
+# Outputs de inferência e treinos
 output/
+runs/
+weights/
+*.pt
 
 # Python
 __pycache__/
