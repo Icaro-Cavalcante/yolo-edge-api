@@ -1,0 +1,8 @@
+names:
+- Capacete
+- Colete
+- Pessoa
+path: /home/icarofall/projetos/yolo-edge-api/preprocessing/outputs/_tmp_eval/e3_b_gauss3
+test: images
+train: images
+val: images

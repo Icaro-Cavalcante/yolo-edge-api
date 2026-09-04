@@ -21,6 +21,8 @@ from schemas import (
     PredictResponse,
 )
 
+from preprocessing.preprocessor import CONFIG_DEFAULT, Preprocessor
+
 app = FastAPI(
     title="YOLO Inference API",
     description="API REST para inferência com YOLOv8 e Câmera no Raspberry Pi 5",
@@ -104,27 +106,32 @@ def _capture_frame_from_camera(device_id: int = 0) -> np.ndarray:
     )
 
 
+_preprocessor = Preprocessor(CONFIG_DEFAULT)
+
+
 def _run_inference(image_np: np.ndarray, model_name: str, confidence: float) -> PredictResponse:
+    # image_np vem em RGB (carregado via PIL); convertemos para BGR para alimentar o Preprocessor
+    img_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+    prep_res = _preprocessor.process(img_bgr)
+
     model = load_model(model_name)
     t0 = time.perf_counter()
-    results = model(image_np, conf=confidence, verbose=False)
+    results = model(prep_res.frame, conf=confidence, verbose=False)
     elapsed_ms = (time.perf_counter() - t0) * 1000
-
 
     detections = []
     for r in results:
-        for box in r.boxes:
-            coords = box.xyxy[0].tolist()
-            cls_id = int(box.cls[0].item())
-            conf_val = float(box.conf[0].item())
-
-
-            detections.append(Detection(
-                label=model.names[cls_id],
-                confidence=round(conf_val, 4),
-                bbox=[round(float(c), 2) for c in coords],
-            ))
-
+        if len(r.boxes) > 0:
+            boxes_xyxy = r.boxes.xyxy.cpu().numpy()
+            orig_boxes = _preprocessor.adjust_boxes(boxes_xyxy, prep_res)
+            for box, b_meta in zip(orig_boxes, r.boxes):
+                cls_id = int(b_meta.cls[0].item())
+                conf_val = float(b_meta.conf[0].item())
+                detections.append(Detection(
+                    label=model.names[cls_id],
+                    confidence=round(conf_val, 4),
+                    bbox=[round(float(c), 2) for c in box.tolist()],
+                ))
 
     h, w = image_np.shape[:2]
     return PredictResponse(
