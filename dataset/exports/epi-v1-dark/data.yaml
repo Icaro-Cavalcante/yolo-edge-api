@@ -1,8 +1,0 @@
-names:
-- Capacete
-- Colete
-- Pessoa
-path: /home/icarofall/projetos/yolo-edge-api/dataset/exports/epi-v1-dark
-test: valid/images
-train: valid/images
-val: valid/images
