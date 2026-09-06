@@ -21,6 +21,7 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 RUN pip install --no-cache-dir -r requirements.txt
 
 
+COPY preprocessing/ /app/preprocessing/
 COPY app/ .
 
 

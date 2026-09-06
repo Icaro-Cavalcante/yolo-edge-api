@@ -25,7 +25,7 @@ echo "[1/4] Baixando nova imagem..."
 docker compose pull
 
 echo "[2/4] Iniciando nova versão..."
-docker compose up -d
+docker compose up -d --build || true
 
 echo "[3/4] Aguardando health check ($((HEALTH_RETRIES * HEALTH_WAIT))s max)..."
 SUCCESS=false
